@@ -1,9 +1,18 @@
-import React, { Component } from 'react';
+import React, {
+  Component
+} from 'react';
 import PropTypes from 'prop-types';
-import { StyleSheet, requireNativeComponent, NativeModules, View, ViewPropTypes, Image, Platform, UIManager, findNodeHandle, Dimensions } from 'react-native';
+import {
+  StyleSheet,
+  requireNativeComponent,
+  NativeModules,
+  View,
+  ViewPropTypes,
+  Image,
+  Platform
+} from 'react-native';
 import resolveAssetSource from 'react-native/Libraries/Image/resolveAssetSource';
 import TextTrackType from './TextTrackType';
-import FilterType from './FilterType';
 import VideoResizeMode from './VideoResizeMode.js';
 
 const styles = StyleSheet.create({
@@ -12,7 +21,14 @@ const styles = StyleSheet.create({
   },
 });
 
-export { TextTrackType, FilterType };
+const {
+  ExoPlayerCache
+} = NativeModules;
+
+export {
+  TextTrackType,
+  ExoPlayerCache,
+};
 
 export default class Video extends Component {
 
@@ -20,35 +36,8 @@ export default class Video extends Component {
     super(props);
 
     this.state = {
-      showPoster: !!props.poster,
-      androidFullScreen: false,
-      videoContainerLayout_x: 0,
-      videoContainerLayout_y: 0
+      showPoster: true,
     };
-    this.getDimension();
-  }
-
-  /**
-   * @description this is will set the width and height needs to be considered for full screen
-   */
-  getDimension() {
-    if (Dimensions.get('window').width < Dimensions.get('window').height) {
-      this.width = Math.round(Dimensions.get('window').height);
-      this.height = Math.round(Dimensions.get('window').width);
-    }
-    else {
-      this.width = Math.round(Dimensions.get('window').width);
-      this.height = Math.round(Dimensions.get('window').height);
-    }
-  }
-
-  componentDidMount() {
-    UIManager.measure(findNodeHandle(this._videoContainer), (x, y) => {
-      this.setState({
-        videoContainerLayout_x: x,
-        videoContainerLayout_y: y
-      })
-    })
   }
 
   setNativeProps(nativeProps) {
@@ -58,7 +47,7 @@ export default class Video extends Component {
   toTypeString(x) {
     switch (typeof x) {
       case "object":
-        return x instanceof Date
+        return x instanceof Date 
           ? x.toISOString()
           : JSON.stringify(x); // object, null
       case "undefined":
@@ -79,8 +68,6 @@ export default class Video extends Component {
   }
 
   seek = (time, tolerance = 100) => {
-    if (isNaN(time)) throw new Error('Specified time is not a number');
-
     if (Platform.OS === 'ios') {
       this.setNativeProps({
         seek: {
@@ -89,35 +76,27 @@ export default class Video extends Component {
         }
       });
     } else {
-      this.setNativeProps({ seek: time });
+      this.setNativeProps({
+        seek: time
+      });
     }
   };
 
   presentFullscreenPlayer = () => {
-    this.setNativeProps({ fullscreen: true });
+    this.setNativeProps({
+      fullscreen: true
+    });
   };
 
   dismissFullscreenPlayer = () => {
-    this.setNativeProps({ fullscreen: false });
-  };
-
-  save = async (options?) => {
-    return await NativeModules.VideoManager.save(options, findNodeHandle(this._root));
-  }
-
-  restoreUserInterfaceForPictureInPictureStopCompleted = (restored) => {
-    this.setNativeProps({ restoreUserInterfaceForPIPStopCompletionHandler: restored });
+    this.setNativeProps({
+      fullscreen: false
+    });
   };
 
   _assignRoot = (component) => {
     this._root = component;
   };
-
-  _hidePoster = () => {
-    if (this.state.showPoster) {
-      this.setState({ showPoster: false });
-    }
-  }
 
   _onLoadStart = (event) => {
     if (this.props.onLoadStart) {
@@ -126,10 +105,6 @@ export default class Video extends Component {
   };
 
   _onLoad = (event) => {
-    // Need to hide poster here for windows as onReadyForDisplay is not implemented
-    if (Platform.OS === 'windows') {
-      this._hidePoster();
-    }
     if (this.props.onLoad) {
       this.props.onLoad(event.nativeEvent);
     }
@@ -147,13 +122,13 @@ export default class Video extends Component {
     }
   };
 
-  _onBandwidthUpdate = (event) => {
-    if (this.props.onBandwidthUpdate) {
-      this.props.onBandwidthUpdate(event.nativeEvent);
-    }
-  };
-
   _onSeek = (event) => {
+    if (this.state.showPoster && !this.props.audioOnly) {
+      this.setState({
+        showPoster: false
+      });
+    }
+
     if (this.props.onSeek) {
       this.props.onSeek(event.nativeEvent);
     }
@@ -172,7 +147,6 @@ export default class Video extends Component {
   };
 
   _onFullscreenPlayerWillPresent = (event) => {
-    Platform.OS === 'android' && this.setState({ androidFullScreen: true })
     if (this.props.onFullscreenPlayerWillPresent) {
       this.props.onFullscreenPlayerWillPresent(event.nativeEvent);
     }
@@ -185,7 +159,6 @@ export default class Video extends Component {
   };
 
   _onFullscreenPlayerWillDismiss = (event) => {
-    Platform.OS === 'android' && this.setState({ androidFullScreen: false })
     if (this.props.onFullscreenPlayerWillDismiss) {
       this.props.onFullscreenPlayerWillDismiss(event.nativeEvent);
     }
@@ -198,10 +171,6 @@ export default class Video extends Component {
   };
 
   _onReadyForDisplay = (event) => {
-    if (!this.props.audioOnly) {
-      this._hidePoster();
-    }
-    
     if (this.props.onReadyForDisplay) {
       this.props.onReadyForDisplay(event.nativeEvent);
     }
@@ -220,32 +189,20 @@ export default class Video extends Component {
   };
 
   _onPlaybackRateChange = (event) => {
+    if (this.state.showPoster && event.nativeEvent.playbackRate !== 0 && !this.props.audioOnly) {
+      this.setState({
+        showPoster: false
+      });
+    }
+
     if (this.props.onPlaybackRateChange) {
       this.props.onPlaybackRateChange(event.nativeEvent);
     }
   };
 
-  _onExternalPlaybackChange = (event) => {
-    if (this.props.onExternalPlaybackChange) {
-      this.props.onExternalPlaybackChange(event.nativeEvent);
-    }
-  }
-
   _onAudioBecomingNoisy = () => {
     if (this.props.onAudioBecomingNoisy) {
       this.props.onAudioBecomingNoisy();
-    }
-  };
-
-  _onPictureInPictureStatusChanged = (event) => {
-    if (this.props.onPictureInPictureStatusChanged) {
-      this.props.onPictureInPictureStatusChanged(event.nativeEvent);
-    }
-  };
-
-  _onRestoreUserInterfaceForPictureInPictureStop = (event) => {
-    if (this.props.onRestoreUserInterfaceForPictureInPictureStop) {
-      this.props.onRestoreUserInterfaceForPictureInPictureStop();
     }
   };
 
@@ -261,41 +218,27 @@ export default class Video extends Component {
     }
   };
 
-  getViewManagerConfig = viewManagerName => {
-    if (!NativeModules.UIManager.getViewManagerConfig) {
-      return NativeModules.UIManager[viewManagerName];
-    }
-    return NativeModules.UIManager.getViewManagerConfig(viewManagerName);
-  };
-
   render() {
     const resizeMode = this.props.resizeMode;
     const source = resolveAssetSource(this.props.source) || {};
-    const shouldCache = !Boolean(source.__packager_asset)
 
     let uri = source.uri || '';
     if (uri && uri.match(/^\//)) {
       uri = `file://${uri}`;
     }
 
-    if (!uri) {
-      console.warn('Trying to load empty source.');
-    }
-
     const isNetwork = !!(uri && uri.match(/^https?:/));
     const isAsset = !!(uri && uri.match(/^(assets-library|ipod-library|file|content|ms-appx|ms-appdata):/));
 
     let nativeResizeMode;
-    const RCTVideoInstance = this.getViewManagerConfig('RCTVideo');
-
     if (resizeMode === VideoResizeMode.stretch) {
-      nativeResizeMode = RCTVideoInstance.Constants.ScaleToFill;
+      nativeResizeMode = NativeModules.UIManager.RCTVideo.Constants.ScaleToFill;
     } else if (resizeMode === VideoResizeMode.contain) {
-      nativeResizeMode = RCTVideoInstance.Constants.ScaleAspectFit;
+      nativeResizeMode = NativeModules.UIManager.RCTVideo.Constants.ScaleAspectFit;
     } else if (resizeMode === VideoResizeMode.cover) {
-      nativeResizeMode = RCTVideoInstance.Constants.ScaleAspectFill;
+      nativeResizeMode = NativeModules.UIManager.RCTVideo.Constants.ScaleAspectFill;
     } else {
-      nativeResizeMode = RCTVideoInstance.Constants.ScaleNone;
+      nativeResizeMode = NativeModules.UIManager.RCTVideo.Constants.ScaleNone;
     }
 
     const nativeProps = Object.assign({}, this.props);
@@ -306,7 +249,6 @@ export default class Video extends Component {
         uri,
         isNetwork,
         isAsset,
-        shouldCache,
         type: source.type || '',
         mainVer: source.mainVer || 0,
         patchVer: source.patchVer || 0,
@@ -319,10 +261,8 @@ export default class Video extends Component {
       onVideoSeek: this._onSeek,
       onVideoEnd: this._onEnd,
       onVideoBuffer: this._onBuffer,
-      onVideoBandwidthUpdate: this._onBandwidthUpdate,
       onTimedMetadata: this._onTimedMetadata,
       onVideoAudioBecomingNoisy: this._onAudioBecomingNoisy,
-      onVideoExternalPlaybackChange: this._onExternalPlaybackChange,
       onVideoFullscreenPlayerWillPresent: this._onFullscreenPlayerWillPresent,
       onVideoFullscreenPlayerDidPresent: this._onFullscreenPlayerDidPresent,
       onVideoFullscreenPlayerWillDismiss: this._onFullscreenPlayerWillDismiss,
@@ -333,64 +273,42 @@ export default class Video extends Component {
       onPlaybackRateChange: this._onPlaybackRateChange,
       onAudioFocusChanged: this._onAudioFocusChanged,
       onAudioBecomingNoisy: this._onAudioBecomingNoisy,
-      onPictureInPictureStatusChanged: this._onPictureInPictureStatusChanged,
-      onRestoreUserInterfaceForPictureInPictureStop: this._onRestoreUserInterfaceForPictureInPictureStop,
     });
 
-    const posterStyle = {
-      ...StyleSheet.absoluteFillObject,
-      resizeMode: this.props.posterResizeMode || 'contain',
-    };
+    if (this.props.poster && this.state.showPoster) {
+      const posterStyle = {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        resizeMode: this.props.posterResizeMode || 'contain'
+      };
 
-    //androidFullScreen property will only impact on android. It will be always false for iOS.
-    const videoStyle = this.state.androidFullScreen ? {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: this.width,
-      height: this.height,
-      backgroundColor: '#ffffff',
-      justifyContent: "center",
-      zIndex: 99999,
-      marginTop: -1 * (this.state.videoContainerLayout_y ? parseFloat(this.state.videoContainerLayout_y) : 0), //margin: 0 - is not working properly. So, updated all the margin individually with 0.
-      marginLeft: -1 * (this.state.videoContainerLayout_x ? parseFloat(this.state.videoContainerLayout_x) : 0)
-    } : {}
+      return (
+        <View style={nativeProps.style}>
+          <RCTVideo
+            ref={this._assignRoot}
+            {...nativeProps}
+          />
+          <Image
+            style={posterStyle}
+            source={{uri: this.props.poster}}
+          />
+        </View>
+      );
+    }
 
     return (
-      <View ref={(videoContainer) => this._videoContainer = videoContainer} style={[nativeProps.style, videoStyle]}>
-        <RCTVideo
-          ref={this._assignRoot}
-          {...nativeProps}
-          style={StyleSheet.absoluteFill}
-        />
-        {this.state.showPoster && (
-          <Image style={posterStyle} source={{ uri: this.props.poster }} />
-        )}
-      </View>
+      <RCTVideo
+        ref={this._assignRoot}
+        {...nativeProps}
+      />
     );
   }
 }
 
 Video.propTypes = {
-  filter: PropTypes.oneOf([
-    FilterType.NONE,
-    FilterType.INVERT,
-    FilterType.MONOCHROME,
-    FilterType.POSTERIZE,
-    FilterType.FALSE,
-    FilterType.MAXIMUMCOMPONENT,
-    FilterType.MINIMUMCOMPONENT,
-    FilterType.CHROME,
-    FilterType.FADE,
-    FilterType.INSTANT,
-    FilterType.MONO,
-    FilterType.NOIR,
-    FilterType.PROCESS,
-    FilterType.TONAL,
-    FilterType.TRANSFER,
-    FilterType.SEPIA
-  ]),
-  filterEnabled: PropTypes.bool,
   /* Native only */
   src: PropTypes.object,
   seek: PropTypes.oneOfType([
@@ -403,12 +321,10 @@ Video.propTypes = {
   onVideoBuffer: PropTypes.func,
   onVideoError: PropTypes.func,
   onVideoProgress: PropTypes.func,
-  onVideoBandwidthUpdate: PropTypes.func,
   onVideoSeek: PropTypes.func,
   onVideoEnd: PropTypes.func,
   onTimedMetadata: PropTypes.func,
   onVideoAudioBecomingNoisy: PropTypes.func,
-  onVideoExternalPlaybackChange: PropTypes.func,
   onVideoFullscreenPlayerWillPresent: PropTypes.func,
   onVideoFullscreenPlayerDidPresent: PropTypes.func,
   onVideoFullscreenPlayerWillDismiss: PropTypes.func,
@@ -422,22 +338,12 @@ Video.propTypes = {
     // Opaque type returned by require('./video.mp4')
     PropTypes.number
   ]),
-  minLoadRetryCount: PropTypes.number,
-  maxBitRate: PropTypes.number,
   resizeMode: PropTypes.string,
   poster: PropTypes.string,
   posterResizeMode: Image.propTypes.resizeMode,
   repeat: PropTypes.bool,
-  automaticallyWaitsToMinimizeStalling: PropTypes.bool,
   allowsExternalPlayback: PropTypes.bool,
   selectedAudioTrack: PropTypes.shape({
-    type: PropTypes.string.isRequired,
-    value: PropTypes.oneOfType([
-      PropTypes.string,
-      PropTypes.number
-    ])
-  }),
-  selectedVideoTrack: PropTypes.shape({
     type: PropTypes.string.isRequired,
     value: PropTypes.oneOfType([
       PropTypes.string,
@@ -474,26 +380,20 @@ Video.propTypes = {
   }),
   stereoPan: PropTypes.number,
   rate: PropTypes.number,
-  pictureInPicture: PropTypes.bool,
   playInBackground: PropTypes.bool,
   playWhenInactive: PropTypes.bool,
   ignoreSilentSwitch: PropTypes.oneOf(['ignore', 'obey']),
-  reportBandwidth: PropTypes.bool,
   disableFocus: PropTypes.bool,
   controls: PropTypes.bool,
   audioOnly: PropTypes.bool,
   currentTime: PropTypes.number,
-  fullscreenAutorotate: PropTypes.bool,
-  fullscreenOrientation: PropTypes.oneOf(['all', 'landscape', 'portrait']),
   progressUpdateInterval: PropTypes.number,
   useTextureView: PropTypes.bool,
-  hideShutterView: PropTypes.bool,
   onLoadStart: PropTypes.func,
   onLoad: PropTypes.func,
   onBuffer: PropTypes.func,
   onError: PropTypes.func,
   onProgress: PropTypes.func,
-  onBandwidthUpdate: PropTypes.func,
   onSeek: PropTypes.func,
   onEnd: PropTypes.func,
   onFullscreenPlayerWillPresent: PropTypes.func,
@@ -506,9 +406,6 @@ Video.propTypes = {
   onPlaybackRateChange: PropTypes.func,
   onAudioFocusChanged: PropTypes.func,
   onAudioBecomingNoisy: PropTypes.func,
-  onPictureInPictureStatusChanged: PropTypes.func,
-  needsToRestoreUserInterfaceForPictureInPictureStop: PropTypes.func,
-  onExternalPlaybackChange: PropTypes.func,
 
   /* Required by react-native */
   scaleX: PropTypes.number,
